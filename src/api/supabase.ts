@@ -1055,6 +1055,10 @@ export interface Staff {
   isLocal: boolean;
   notes: string | null;
   ticketFrequency: number; // 1 = every year, 2 = every 2 years
+  // Linked user account
+  userId: string | null;       // UUID from auth.users — null = no app account
+  accountEmail?: string | null;  // populated by fetchStaffWithProfiles join
+  accountRole?: string | null;   // populated by fetchStaffWithProfiles join
 }
 
 export interface StaffInput {
@@ -1109,6 +1113,7 @@ function normalizeStaff(r: Record<string, unknown>): Staff {
     isLocal: (r.is_local as boolean) ?? false,
     notes: (r.notes as string) ?? null,
     ticketFrequency: r.ticket_frequency != null ? Number(r.ticket_frequency) : 2,
+    userId: (r.user_id as string) ?? null,
   };
 }
 
@@ -1149,6 +1154,94 @@ export async function bulkUpsertStaff(records: StaffInput[]): Promise<Staff[]> {
     results.push(...(data ?? []).map(normalizeStaff));
   }
   return results;
+}
+
+// ─── Staff ↔ User Account Management ────────────────────────────────────────
+
+/** Fetch staff with joined profile data (email, role) for account status display */
+export async function fetchStaffWithProfiles(includeInactive = false): Promise<Staff[]> {
+  let q = supabase.from("staff").select("*").order("name");
+  if (!includeInactive) q = q.eq("status", "active");
+  const { data, error } = await q;
+  if (error) throw new Error(`fetchStaffWithProfiles: ${error.message}`);
+  const staffList = (data ?? []).map(normalizeStaff);
+
+  // Fetch all profiles to join by user_id
+  const userIds = staffList.map(s => s.userId).filter(Boolean) as string[];
+  if (userIds.length === 0) return staffList;
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, email, role")
+    .in("id", userIds);
+
+  const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
+  return staffList.map(s => {
+    if (s.userId && profileMap.has(s.userId)) {
+      const p = profileMap.get(s.userId)!;
+      return { ...s, accountEmail: p.email ?? null, accountRole: p.role ?? null };
+    }
+    return s;
+  });
+}
+
+/** Create an app account for a staff member — invites via Edge Function, then links */
+export async function inviteUserForStaff(
+  staffId: number,
+  email: string,
+  staffName: string,
+  category: string
+): Promise<{ tempPassword?: string }> {
+  const role = category === "DRIVER" ? "driver" : "staff";
+  const result = await inviteUser(email, staffName, role);
+
+  // Small delay to let the Edge Function finish creating the profile row
+  await new Promise(r => setTimeout(r, 1500));
+
+  // Look up the newly created profile by email
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", email.toLowerCase().trim())
+    .single();
+
+  if (profile) {
+    await supabase.from("staff").update({ user_id: profile.id }).eq("id", staffId);
+  }
+
+  return { tempPassword: (result as Record<string, string>)?.tempPassword ?? "" };
+}
+
+/** Fetch staff members who don't have an app account yet */
+export async function getStaffWithoutAccounts(category?: string): Promise<Staff[]> {
+  let q = supabase.from("staff").select("*").is("user_id", null).eq("status", "active").order("name");
+  if (category) q = q.eq("category", category);
+  const { data, error } = await q;
+  if (error) throw new Error(`getStaffWithoutAccounts: ${error.message}`);
+  return (data ?? []).map(normalizeStaff);
+}
+
+/** Send password reset email for a staff member's linked account */
+export async function resetPasswordForStaff(userId: string): Promise<void> {
+  const { data } = await supabase.from("profiles").select("email").eq("id", userId).single();
+  if (!data?.email) throw new Error("No email found for this account");
+  await resetPasswordForEmail(data.email);
+}
+
+/** Deactivate a user account (ban — reversible) */
+export async function deactivateUserAccount(userId: string): Promise<void> {
+  await invokeFunction("deactivate-user", { userId, action: "ban" });
+}
+
+/** Reactivate a previously deactivated user account */
+export async function reactivateUserAccount(userId: string): Promise<void> {
+  await invokeFunction("deactivate-user", { userId, action: "unban" });
+}
+
+/** Unlink a user account from a staff record (does NOT delete the account) */
+export async function unlinkUserFromStaff(staffId: number): Promise<void> {
+  const { error } = await supabase.from("staff").update({ user_id: null }).eq("id", staffId);
+  if (error) throw new Error(`unlinkUserFromStaff: ${error.message}`);
 }
 
 // ─── Deductions ──────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import CustomSelect from "./components/CustomSelect";
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
-import { signOut, bulkInsertJobs, checkServiceAlerts, createAlert, createCheckIn, createExpense, createMake, createRefLocation, createRefModel, createRole, createUnavailability, createVehicle, deleteAlert, deleteDailyOp, deleteExpense, deleteJob, deleteJobsByDate, deleteMake, deleteRefLocation, deleteRefModel, deleteRole, deleteUser, fetchAlerts, fetchAllVehicles, fetchCheckIns, fetchDailyOp, fetchExpenses, fetchJobs, fetchMakes, fetchProfiles, fetchRefLocations, fetchRefModels, fetchRoles, fetchUnavailabilities, fetchUnavailabilityReasons, createUnavailabilityReason, deleteUnavailabilityReason, fetchVehicleTypes, getLastCheckout, inviteUser, markAlertRead, markAllAlertsRead, resolveUnavailability, updateUnavailability, submitDailyOp, updateAlertStatus, updatePassword, updateUserRole, updateVehicle, uploadVehicleAsset, fetchStaff, createStaff, updateStaff, deactivateStaff, fetchAttendance, fetchAttendanceByDate, upsertAttendance, bulkUpsertAttendance, type AlertInput, type AlertRecord, type AttendanceRecord, type CheckInInput, type CheckInRecord, type DailyOpRaw, type ExpenseType, type FleetVehicle, type Job, type JobInput, type Make, type RefLocation, type RefModel, type Role, type Staff, type StaffInput, type UnavailabilityReason, type UserProfile, type VehicleCreateInput, type VehicleExpense, type VehicleUnavailability, type VehicleUpdateInput, type VehicleType, deleteSalesLead, fetchSalesLeads, generateSalesLeads, updateSalesLead, createLeadActivity, fetchLeadActivities, fetchProspectContacts, updateProspectContact, fetchContactsForLead, createContactActivity, createProspectContact, linkContactToLead, searchApolloContacts, generateLeadEmail, enrichContactViaApollo, fetchAllActivities, fetchPermissionsForRole, fetchRolePermissions, setRolePermissions, type ActivityWithLead, type ApolloSearchResult, type ActivityType, type LeadActivity, type LeadConfidence, type LeadStatus, type LeadType, type SalesLead, type ContactStatus, type ProspectContactRecord, fetchDeductions, createDeduction, updateDeduction, deleteDeduction, createInstallmentDeductions, fetchDeductionsByGroup, deleteDeductionGroup, type Deduction, type DeductionType, fetchStaffDocuments, createStaffDocument, deleteStaffDocument, uploadStaffDocumentFile, type StaffDocument, type DocumentType, fetchMonthlyRecap, updateMonthlyRecap, recalcMonthlyRecap, type MonthlyRecapRecord } from "./api/supabase";
+import { signOut, bulkInsertJobs, checkServiceAlerts, createAlert, createCheckIn, createExpense, createMake, createRefLocation, createRefModel, createRole, createUnavailability, createVehicle, deleteAlert, deleteDailyOp, deleteExpense, deleteJob, deleteJobsByDate, deleteMake, deleteRefLocation, deleteRefModel, deleteRole, deleteUser, fetchAlerts, fetchAllVehicles, fetchCheckIns, fetchDailyOp, fetchExpenses, fetchJobs, fetchMakes, fetchProfiles, fetchRefLocations, fetchRefModels, fetchRoles, fetchUnavailabilities, fetchUnavailabilityReasons, createUnavailabilityReason, deleteUnavailabilityReason, fetchVehicleTypes, getLastCheckout, inviteUser, markAlertRead, markAllAlertsRead, resolveUnavailability, updateUnavailability, submitDailyOp, updateAlertStatus, updatePassword, updateUserRole, updateVehicle, uploadVehicleAsset, fetchStaff, createStaff, updateStaff, deactivateStaff, fetchAttendance, fetchAttendanceByDate, upsertAttendance, bulkUpsertAttendance, type AlertInput, type AlertRecord, type AttendanceRecord, type CheckInInput, type CheckInRecord, type DailyOpRaw, type ExpenseType, type FleetVehicle, type Job, type JobInput, type Make, type RefLocation, type RefModel, type Role, type Staff, type StaffInput, type UnavailabilityReason, type UserProfile, type VehicleCreateInput, type VehicleExpense, type VehicleUnavailability, type VehicleUpdateInput, type VehicleType, deleteSalesLead, fetchSalesLeads, generateSalesLeads, updateSalesLead, createLeadActivity, fetchLeadActivities, fetchProspectContacts, updateProspectContact, fetchContactsForLead, createContactActivity, createProspectContact, linkContactToLead, searchApolloContacts, generateLeadEmail, enrichContactViaApollo, fetchAllActivities, fetchPermissionsForRole, fetchRolePermissions, setRolePermissions, type ActivityWithLead, type ApolloSearchResult, type ActivityType, type LeadActivity, type LeadConfidence, type LeadStatus, type LeadType, type SalesLead, type ContactStatus, type ProspectContactRecord, fetchDeductions, createDeduction, updateDeduction, deleteDeduction, createInstallmentDeductions, fetchDeductionsByGroup, deleteDeductionGroup, type Deduction, type DeductionType, fetchStaffDocuments, createStaffDocument, deleteStaffDocument, uploadStaffDocumentFile, type StaffDocument, type DocumentType, fetchMonthlyRecap, updateMonthlyRecap, recalcMonthlyRecap, type MonthlyRecapRecord, fetchStaffWithProfiles, inviteUserForStaff, getStaffWithoutAccounts, resetPasswordForStaff, deactivateUserAccount, reactivateUserAccount } from "./api/supabase";
 import { useJobs } from "./context/JobsContext";
 import { deriveAnnual, deriveDailyData, deriveMonthlyData, getDailyKey, getVehicleType, VEHICLE_TYPES } from "./dashboardData";
 import { computeDepreciation, formatAED, DEPRECIATION_MONTHS } from "./utils/depreciation";
@@ -7529,8 +7529,19 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
   const [staffSearch, setStaffSearch] = useState("");
   const [staffCategory, setStaffCategory] = useState("all");
   const [profileStaff, setProfileStaff] = useState<Staff | null>(null);
-  const [profileTab, setProfileTab] = useState<"info" | "contract" | "documents" | "attendance">("info");
+  const [profileTab, setProfileTab] = useState<"info" | "contract" | "documents" | "attendance" | "account">("info");
   const [editingProfile, setEditingProfile] = useState(false);
+  // Account management state
+  const [accountEmail, setAccountEmail] = useState("");
+  const [accountCreating, setAccountCreating] = useState(false);
+  const [accountTempPassword, setAccountTempPassword] = useState<string | null>(null);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [showBulkInvite, setShowBulkInvite] = useState(false);
+  const [bulkInviteList, setBulkInviteList] = useState<Staff[]>([]);
+  const [bulkInviteEmails, setBulkInviteEmails] = useState<Record<number, string>>({});
+  const [bulkInviteProgress, setBulkInviteProgress] = useState<Record<number, "pending" | "success" | "error">>({});
+  const [bulkInviteResults, setBulkInviteResults] = useState<Record<number, string>>({});
+  const [bulkInviting, setBulkInviting] = useState(false);
   const [editFields, setEditFields] = useState<Record<string, Any>>({});
   const [newEmployeeCode, setNewEmployeeCode] = useState("");
   const [newFirstName, setNewFirstName] = useState("");
@@ -7546,7 +7557,7 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const loadAllStaff = async () => {
-    try { const s = await fetchStaff(true); setAllStaff(s); } catch (e) { console.error(e); }
+    try { const s = await fetchStaffWithProfiles(true); setAllStaff(s); } catch (e) { console.error(e); }
   };
 
   useEffect(() => { loadAllStaff().then(() => setLoading(false)); }, []);
@@ -7713,8 +7724,10 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
   if (loading) return <div style={{ textAlign: "center", padding: 60, color: "#86868b" }}>Loading HR data...</div>;
 
   // ── Shared computed data ──
-  const activeList = allStaff.filter(s => s.status === "active");
-  const inactiveList = allStaff.filter(s => s.status !== "active");
+  // Status is now computed from release_date (contract end)
+  const isActive = (s: Staff) => !s.releaseDate || new Date(s.releaseDate) >= new Date();
+  const activeList = allStaff.filter(isActive);
+  const inactiveList = allStaff.filter(s => !isActive(s));
   const baseList = showInactive ? inactiveList : activeList;
   const filteredList = baseList.filter(s => {
     const q = staffSearch.toLowerCase();
@@ -7799,10 +7812,22 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
             <CustomSelect value={staffCategory} onChange={v => setStaffCategory(String(v))} options={[{ value: "all", label: "All categories" }, { value: "DRIVER", label: "Drivers" }, { value: "STAFF", label: "Staff" }]} compact triggerStyle={{ background: staffCategory !== "all" ? "rgba(0,122,255,0.08)" : "#f5f5f7", border: staffCategory !== "all" ? "1px solid rgba(0,122,255,0.3)" : "1px solid #e5e5ea", color: staffCategory !== "all" ? "#007aff" : "#1d1d1f", fontWeight: staffCategory !== "all" ? 700 : 400 }} />
             <div style={{ display: "flex", gap: 4, background: "#f5f5f7", borderRadius: 8, padding: 3 }}>
               <button onClick={() => setShowInactive(false)} style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: !showInactive ? "#fff" : "transparent", color: !showInactive ? "#1d1d1f" : "#86868b", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", boxShadow: !showInactive ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}>Active ({activeList.length})</button>
-              <button onClick={() => setShowInactive(true)} style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: showInactive ? "#fff" : "transparent", color: showInactive ? "#1d1d1f" : "#86868b", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", boxShadow: showInactive ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}>Inactive ({inactiveList.length})</button>
+              <button onClick={() => setShowInactive(true)} style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: showInactive ? "#fff" : "transparent", color: showInactive ? "#1d1d1f" : "#86868b", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", boxShadow: showInactive ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}>Contract Ended ({inactiveList.length})</button>
             </div>
             <div style={{ flex: 1 }} />
-            {!readOnly && <button onClick={() => setShowAddStaff(true)} style={{ background: "#007aff", color: "#fff", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Add Employee</button>}
+            {!readOnly && (
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={async () => {
+                  const list = await getStaffWithoutAccounts();
+                  setBulkInviteList(list);
+                  setBulkInviteEmails({});
+                  setBulkInviteProgress({});
+                  setBulkInviteResults({});
+                  setShowBulkInvite(true);
+                }} style={{ background: "rgba(0,122,255,0.08)", color: "#007aff", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🔐 Bulk Invite</button>
+                <button onClick={() => setShowAddStaff(true)} style={{ background: "#007aff", color: "#fff", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Add Employee</button>
+              </div>
+            )}
           </div>
 
           {/* KPI Cards */}
@@ -7835,8 +7860,8 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
                   <th style={thS}>Category</th>
                   <th style={thS}>Arrival</th>
                   <th style={thS}>Status</th>
+                  <th style={{ ...thS, textAlign: "center" }}>Account</th>
                   <th style={{ ...thS, textAlign: "center" }}>Ticket</th>
-                  {!readOnly && <th style={{ ...thS, textAlign: "center" }}>Action</th>}
                 </tr>
               </thead>
               <tbody>
@@ -7849,7 +7874,23 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
                     <td style={tdS}><span style={desigBadge(s.designation)}>{s.designation}</span></td>
                     <td style={tdS}><span style={catBadge(s.category)}>{s.category}</span></td>
                     <td style={tdS}><span style={{ fontSize: 11, color: "#86868b" }}>{s.dateOfArrival ? new Date(s.dateOfArrival + "T12:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</span></td>
-                    <td style={tdS}><span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: s.status === "active" ? "rgba(52,199,89,0.08)" : "rgba(255,59,48,0.08)", color: s.status === "active" ? "#34c759" : "#ff3b30" }}>{s.status}</span></td>
+                    <td style={tdS}>
+                      {isActive(s) ? (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "rgba(52,199,89,0.08)", color: "#34c759" }}>Active</span>
+                      ) : (
+                        <div>
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "rgba(255,59,48,0.08)", color: "#ff3b30" }}>Ended</span>
+                          {s.releaseDate && <div style={{ fontSize: 9, color: "#86868b", marginTop: 2 }}>{new Date(s.releaseDate + "T12:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ ...tdS, textAlign: "center" }}>
+                      {s.userId ? (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "rgba(0,122,255,0.08)", color: "#007aff" }}>● Active</span>
+                      ) : (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "rgba(142,142,147,0.08)", color: "#c7c7cc" }}>No account</span>
+                      )}
+                    </td>
                     <td style={{ ...tdS, textAlign: "center" }}>
                       {s.ticketFrequency === 0 ? (
                         <span style={{ fontSize: 10, fontWeight: 600, color: "#c7c7cc" }}>—</span>
@@ -7859,13 +7900,6 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
                         </span>
                       )}
                     </td>
-                    {!readOnly && <td style={{ ...tdS, textAlign: "center" }} onClick={e => e.stopPropagation()}>
-                      {s.status === "active" ? (
-                        <button onClick={async () => { if (confirm(`Deactivate ${s.name}?`)) { await deactivateStaff(s.id); loadAllStaff(); } }} style={{ background: "none", border: "1px solid #e5e5ea", borderRadius: 6, padding: "4px 10px", fontSize: 10, color: "#ff3b30", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>Deactivate</button>
-                      ) : (
-                        <button onClick={async () => { await updateStaff(s.id, { status: "active" }); loadAllStaff(); }} style={{ background: "none", border: "1px solid #e5e5ea", borderRadius: 6, padding: "4px 10px", fontSize: 10, color: "#34c759", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>Reactivate</button>
-                      )}
-                    </td>}
                   </tr>
                   ); })}
               </tbody>
@@ -8540,7 +8574,7 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
                 <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
                   <span style={desigBadge(profileStaff.designation)}>{profileStaff.designation}</span>
                   <span style={catBadge(profileStaff.category)}>{profileStaff.category}</span>
-                  <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: profileStaff.status === "active" ? "rgba(52,199,89,0.08)" : "rgba(255,59,48,0.08)", color: profileStaff.status === "active" ? "#34c759" : "#ff3b30" }}>{profileStaff.status}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: isActive(profileStaff) ? "rgba(52,199,89,0.08)" : "rgba(255,59,48,0.08)", color: isActive(profileStaff) ? "#34c759" : "#ff3b30" }}>{isActive(profileStaff) ? "Active" : "Contract ended"}</span>
                   {profileStaff.isLocal && <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "rgba(52,199,89,0.08)", color: "#34c759" }}>UAE National</span>}
                   {isTicketEligible(profileStaff.dateOfArrival, profileStaff.ticketFrequency) ? (
                     <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "rgba(88,86,214,0.08)", color: "#5856d6" }}>✈️ Ticket {new Date().getFullYear()}</span>
@@ -8571,9 +8605,9 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
 
             {/* Profile Sub-tabs */}
             <div style={{ display: "flex", gap: 0, padding: "16px 24px 0", borderBottom: "1px solid #f0f0f0" }}>
-              {(["info", "contract", "documents", "attendance"] as const).map(t => (
-                <button key={t} onClick={() => setProfileTab(t)} style={{ padding: "8px 16px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: profileTab === t ? "#007aff" : "#86868b", borderBottom: profileTab === t ? "2px solid #007aff" : "2px solid transparent", marginBottom: -1 }}>
-                  {t === "info" ? "Info" : t === "contract" ? "Contract" : t === "documents" ? "Documents" : "Attendance"}
+              {(["info", "contract", "documents", "attendance", "account"] as const).map(t => (
+                <button key={t} onClick={() => { setProfileTab(t); if (t === "account") { setAccountEmail(""); setAccountTempPassword(null); setAccountError(null); } }} style={{ padding: "8px 16px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: profileTab === t ? "#007aff" : "#86868b", borderBottom: profileTab === t ? "2px solid #007aff" : "2px solid transparent", marginBottom: -1 }}>
+                  {t === "info" ? "Info" : t === "contract" ? "Contract" : t === "documents" ? "Documents" : t === "attendance" ? "Attendance" : "🔐 Account"}
                 </button>
               ))}
             </div>
@@ -8759,6 +8793,110 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
               })()}
 
               {/* ─── ATTENDANCE TAB ─── */}
+              {/* ─── ACCOUNT TAB ─── */}
+              {profileTab === "account" && (
+                <div>
+                  {profileStaff.userId ? (
+                    /* ── Has account ── */
+                    <div>
+                      <div style={{ background: "rgba(0,122,255,0.06)", borderRadius: 14, padding: 20, marginBottom: 16 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                          <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(0,122,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🔐</div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: "#1d1d1f" }}>App Account Active</div>
+                            <div style={{ fontSize: 11, color: "#86868b" }}>This employee has access to the application</div>
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          <div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#86868b", textTransform: "uppercase", marginBottom: 4 }}>Email</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1d1d1f" }}>{profileStaff.accountEmail || "—"}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#86868b", textTransform: "uppercase", marginBottom: 4 }}>Role</div>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 6, background: profileStaff.accountRole === "admin" ? "rgba(255,59,48,0.08)" : profileStaff.accountRole === "driver" ? "rgba(0,122,255,0.08)" : "rgba(88,86,214,0.08)", color: profileStaff.accountRole === "admin" ? "#ff3b30" : profileStaff.accountRole === "driver" ? "#007aff" : "#5856d6" }}>{profileStaff.accountRole || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {!readOnly && (
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button onClick={async () => {
+                            if (!profileStaff.userId) return;
+                            try { await resetPasswordForStaff(profileStaff.userId); alert("Password reset email sent successfully."); } catch (e) { alert(e instanceof Error ? e.message : "Error"); }
+                          }} style={{ flex: 1, background: "#f5f5f7", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", color: "#007aff" }}>
+                            📧 Send Password Reset
+                          </button>
+                          <button onClick={async () => {
+                            if (!profileStaff.userId) return;
+                            if (!confirm(`Deactivate app access for ${profileStaff.name}?`)) return;
+                            try {
+                              await deactivateUserAccount(profileStaff.userId);
+                              alert("Account deactivated. The user can no longer log in.");
+                              await loadAllStaff();
+                              const found = allStaff.find(s => s.id === profileStaff.id);
+                              if (found) setProfileStaff(found);
+                            } catch (e) { alert(e instanceof Error ? e.message : "Error"); }
+                          }} style={{ flex: 1, background: "rgba(255,59,48,0.06)", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", color: "#ff3b30" }}>
+                            🚫 Deactivate Account
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* ── No account ── */
+                    <div>
+                      <div style={{ background: "rgba(142,142,147,0.06)", borderRadius: 14, padding: 20, marginBottom: 16, textAlign: "center" }}>
+                        <div style={{ fontSize: 40, marginBottom: 8 }}>👤</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#1d1d1f", marginBottom: 4 }}>No App Account</div>
+                        <div style={{ fontSize: 12, color: "#86868b" }}>This employee does not have access to the application yet.</div>
+                      </div>
+                      {!readOnly && (
+                        <div style={{ background: "#fff", border: "1px solid #e5e5ea", borderRadius: 14, padding: 20 }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#1d1d1f", marginBottom: 12 }}>Create App Account</div>
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={{ fontSize: 11, fontWeight: 700, color: "#86868b", display: "block", marginBottom: 4 }}>Email address</label>
+                            <input type="email" value={accountEmail} onChange={e => setAccountEmail(e.target.value)} placeholder="firstname.lastname@chabedubai.com" style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #e5e5ea", fontSize: 13, fontFamily: "inherit", boxSizing: "border-box" }} />
+                          </div>
+                          <div style={{ marginBottom: 16 }}>
+                            <label style={{ fontSize: 11, fontWeight: 700, color: "#86868b", display: "block", marginBottom: 4 }}>Role (auto-assigned)</label>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1d1d1f", padding: "8px 12px", background: "#f5f5f7", borderRadius: 8 }}>
+                              {profileStaff.category === "DRIVER" ? "🚗 Driver" : "👔 Staff"}
+                            </div>
+                          </div>
+                          {accountError && <div style={{ color: "#ff3b30", fontSize: 12, marginBottom: 12, fontWeight: 600 }}>⚠️ {accountError}</div>}
+                          {accountTempPassword && (
+                            <div style={{ background: "rgba(52,199,89,0.06)", borderRadius: 10, padding: 14, marginBottom: 12 }}>
+                              <div style={{ fontSize: 11, fontWeight: 800, color: "#34c759", textTransform: "uppercase", marginBottom: 6 }}>✅ Account Created</div>
+                              <div style={{ fontSize: 12, color: "#1d1d1f", marginBottom: 4 }}>Temporary password:</div>
+                              <div style={{ fontFamily: "SF Mono, monospace", fontSize: 16, fontWeight: 800, color: "#1d1d1f", background: "#fff", padding: "8px 12px", borderRadius: 8, border: "1px solid #e5e5ea", userSelect: "all" }}>{accountTempPassword}</div>
+                              <div style={{ fontSize: 10, color: "#86868b", marginTop: 6 }}>Please share this password securely. The user will be asked to change it on first login.</div>
+                            </div>
+                          )}
+                          {!accountTempPassword && (
+                            <button disabled={accountCreating || !accountEmail.includes("@")} onClick={async () => {
+                              setAccountCreating(true);
+                              setAccountError(null);
+                              try {
+                                const result = await inviteUserForStaff(profileStaff.id, accountEmail.trim(), profileStaff.name, profileStaff.category);
+                                setAccountTempPassword(result.tempPassword || "Check email for invitation link");
+                                const freshList = await fetchStaffWithProfiles(true);
+                                setAllStaff(freshList);
+                                const found = freshList.find(s => s.id === profileStaff.id);
+                                if (found) setProfileStaff(found);
+                              } catch (e) { setAccountError(e instanceof Error ? e.message : "Failed to create account"); }
+                              setAccountCreating(false);
+                            }} style={{ width: "100%", background: accountCreating || !accountEmail.includes("@") ? "#c7c7cc" : "#007aff", color: "#fff", border: "none", borderRadius: 10, padding: "12px 16px", fontSize: 13, fontWeight: 700, cursor: accountCreating || !accountEmail.includes("@") ? "default" : "pointer", fontFamily: "inherit" }}>
+                              {accountCreating ? "Creating account..." : "Create Account & Send Invite"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ─── ATTENDANCE TAB ─── */}
               {profileTab === "attendance" && (() => {
                 const daysInProfileMonth = new Date(profileAttYear, profileAttMonth + 1, 0).getDate();
                 const empAtt = profileAttendance.filter(r => r.staffId === profileStaff.id);
@@ -8827,6 +8965,101 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
                 <button onClick={handleSaveProfile} disabled={staffSaving} style={{ background: "#007aff", color: "#fff", border: "none", borderRadius: 10, padding: "8px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{staffSaving ? "Saving..." : "Save Changes"}</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* ════════════════════════════════════════════════════════════ */}
+      {/*  BULK INVITE MODAL                                        */}
+      {/* ════════════════════════════════════════════════════════════ */}
+      {showBulkInvite && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)", padding: 16 }} onClick={() => !bulkInviting && setShowBulkInvite(false)}>
+          <div style={{ background: "#fff", borderRadius: 20, boxShadow: "0 12px 60px rgba(0,0,0,0.2)", width: "100%", maxWidth: 600, maxHeight: "85vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#1d1d1f" }}>🔐 Bulk Invite</div>
+                <div style={{ fontSize: 12, color: "#86868b" }}>{bulkInviteList.length} employee(s) without app accounts</div>
+              </div>
+              <button onClick={() => !bulkInviting && setShowBulkInvite(false)} style={{ background: "#f5f5f7", border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            </div>
+            <div style={{ padding: "16px 24px" }}>
+              {bulkInviteList.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#86868b" }}>
+                  <div style={{ fontSize: 40, marginBottom: 8 }}>🎉</div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>All employees have accounts!</div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 11, color: "#86868b", marginBottom: 12 }}>Enter an email for each employee you want to invite. Leave blank to skip.</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+                    {bulkInviteList.map(s => (
+                      <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: bulkInviteProgress[s.id] === "success" ? "rgba(52,199,89,0.06)" : bulkInviteProgress[s.id] === "error" ? "rgba(255,59,48,0.06)" : "#f9f9fb", borderRadius: 10 }}>
+                        <div style={{ flex: "0 0 140px" }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#1d1d1f" }}>{s.name}</div>
+                          <div style={{ fontSize: 10, color: "#86868b" }}>{s.category} · {s.designation}</div>
+                        </div>
+                        <input
+                          type="email"
+                          placeholder="email@chabedubai.com"
+                          value={bulkInviteEmails[s.id] || ""}
+                          onChange={e => setBulkInviteEmails(prev => ({ ...prev, [s.id]: e.target.value }))}
+                          disabled={bulkInviting || bulkInviteProgress[s.id] === "success"}
+                          style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid #e5e5ea", fontSize: 12, fontFamily: "inherit", boxSizing: "border-box", minWidth: 0 }}
+                        />
+                        <div style={{ flex: "0 0 60px", textAlign: "center" }}>
+                          {bulkInviteProgress[s.id] === "success" && <span style={{ fontSize: 10, fontWeight: 700, color: "#34c759" }}>✅ Done</span>}
+                          {bulkInviteProgress[s.id] === "error" && <span style={{ fontSize: 10, fontWeight: 700, color: "#ff3b30" }}>❌ Fail</span>}
+                          {bulkInviteProgress[s.id] === "pending" && <span style={{ fontSize: 10, fontWeight: 700, color: "#ff9500" }}>⏳</span>}
+                          {!bulkInviteProgress[s.id] && <span style={{ fontSize: 10, color: "#c7c7cc" }}>—</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Results summary */}
+                  {Object.keys(bulkInviteResults).length > 0 && (
+                    <div style={{ background: "rgba(52,199,89,0.06)", borderRadius: 10, padding: 14, marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: "#34c759", textTransform: "uppercase", marginBottom: 8 }}>Temporary Passwords</div>
+                      {Object.entries(bulkInviteResults).map(([id, pwd]) => {
+                        const s = bulkInviteList.find(x => x.id === Number(id));
+                        return (
+                          <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid rgba(52,199,89,0.1)" }}>
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{s?.name ?? id}</span>
+                            <span style={{ fontFamily: "SF Mono, monospace", fontSize: 12, fontWeight: 700, userSelect: "all" }}>{pwd}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button
+                    disabled={bulkInviting || Object.values(bulkInviteEmails).filter(e => e.includes("@")).length === 0}
+                    onClick={async () => {
+                      setBulkInviting(true);
+                      const entries = bulkInviteList.filter(s => (bulkInviteEmails[s.id] || "").includes("@"));
+                      const progress: Record<number, "pending" | "success" | "error"> = {};
+                      entries.forEach(s => { progress[s.id] = "pending"; });
+                      setBulkInviteProgress({ ...progress });
+
+                      const results: Record<number, string> = {};
+                      for (const s of entries) {
+                        try {
+                          const r = await inviteUserForStaff(s.id, bulkInviteEmails[s.id].trim(), s.name, s.category);
+                          progress[s.id] = "success";
+                          results[s.id] = r.tempPassword || "Check email";
+                        } catch {
+                          progress[s.id] = "error";
+                        }
+                        setBulkInviteProgress({ ...progress });
+                        setBulkInviteResults({ ...results });
+                      }
+                      setBulkInviting(false);
+                      await loadAllStaff();
+                    }}
+                    style={{ width: "100%", background: bulkInviting ? "#c7c7cc" : "#007aff", color: "#fff", border: "none", borderRadius: 10, padding: "12px 16px", fontSize: 13, fontWeight: 700, cursor: bulkInviting ? "default" : "pointer", fontFamily: "inherit" }}
+                  >
+                    {bulkInviting ? "Inviting..." : `Invite ${Object.values(bulkInviteEmails).filter(e => e.includes("@")).length} employee(s)`}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
