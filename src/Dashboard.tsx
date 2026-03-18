@@ -6578,35 +6578,6 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
                           {st || "—"}
                         </span>
                       </td>
-                      <td style={{ padding: "4px 4px", textAlign: "center", width: 55 }}>
-                        {!readOnly ? (
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            defaultValue={ot || ""}
-                            key={`ot-${s.id}-${quickDay}-${ot}`}
-                            placeholder="—"
-                            onBlur={async (e) => {
-                              const val = parseFloat(e.target.value) || 0;
-                              if (val === ot) return;
-                              const dateStr = `${attYear}-${String(attMonth + 1).padStart(2, "0")}-${String(quickDay).padStart(2, "0")}`;
-                              const currentStatus = st || "P";
-                              await upsertAttendance(s.id, dateStr, currentStatus, val);
-                              setAttendance((prev) => {
-                                const idx = prev.findIndex((r) => r.staffId === s.id && r.date === dateStr);
-                                const newRec: AttendanceRecord = { id: 0, staffId: s.id, staffName: "", designation: "", date: dateStr, status: currentStatus, otHours: val };
-                                if (idx >= 0) { const copy = [...prev]; copy[idx] = { ...prev[idx], otHours: val }; return copy; }
-                                return [...prev, newRec];
-                              });
-                            }}
-                            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                            style={{ width: 48, padding: "3px 4px", borderRadius: 5, border: "1px solid #e5e5ea", fontSize: 11, fontFamily: "inherit", textAlign: "center", color: ot > 0 ? "#ff9500" : "#86868b", fontWeight: ot > 0 ? 700 : 400 }}
-                          />
-                        ) : (
-                          <span style={{ fontSize: 11, fontWeight: 700, color: ot > 0 ? "#ff9500" : "#d1d1d6" }}>{ot || "—"}</span>
-                        )}
-                      </td>
                       <td style={{ padding: "4px 6px", textAlign: "center", position: "relative", width: 60 }}>
                         {isExpanded ? (
                           <>
@@ -6645,24 +6616,23 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
                           <th style={{ padding: "7px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#86868b", whiteSpace: "nowrap" }}>Employee</th>
                           <th style={{ padding: "7px 8px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#86868b", whiteSpace: "nowrap" }}>Role</th>
                           <th style={{ padding: "7px 8px", textAlign: "center", fontSize: 10, fontWeight: 700, color: "#86868b", width: 50 }}>Status</th>
-                          <th style={{ padding: "7px 8px", textAlign: "center", fontSize: 10, fontWeight: 700, color: "#ff9500", width: 55 }}>OT hrs</th>
                           <th style={{ padding: "7px 8px", textAlign: "center", fontSize: 10, fontWeight: 700, color: "#86868b", width: 60 }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {/* Exceptions first — highlighted */}
                         {exceptions.length > 0 && (
-                          <tr><td colSpan={5} style={{ padding: "6px 12px", fontSize: 10, fontWeight: 800, color: "#ff3b30", background: "rgba(255,59,48,0.04)", borderBottom: "1px solid rgba(255,59,48,0.1)" }}>⚠ Exceptions ({exceptions.length})</td></tr>
+                          <tr><td colSpan={4} style={{ padding: "6px 12px", fontSize: 10, fontWeight: 800, color: "#ff3b30", background: "rgba(255,59,48,0.04)", borderBottom: "1px solid rgba(255,59,48,0.1)" }}>⚠ Exceptions ({exceptions.length})</td></tr>
                         )}
                         {exceptions.map(renderRow)}
                         {/* Unfilled — need attention */}
                         {unfilled.length > 0 && (
-                          <tr><td colSpan={5} style={{ padding: "6px 12px", fontSize: 10, fontWeight: 800, color: "#ff9500", background: "rgba(255,149,0,0.04)", borderBottom: "1px solid rgba(255,149,0,0.1)" }}>○ Not filled ({unfilled.length})</td></tr>
+                          <tr><td colSpan={4} style={{ padding: "6px 12px", fontSize: 10, fontWeight: 800, color: "#ff9500", background: "rgba(255,149,0,0.04)", borderBottom: "1px solid rgba(255,149,0,0.1)" }}>○ Not filled ({unfilled.length})</td></tr>
                         )}
                         {unfilled.map(renderRow)}
                         {/* Present — collapsed */}
                         {present.length > 0 && (
-                          <tr><td colSpan={5} style={{ padding: "6px 12px", fontSize: 10, fontWeight: 800, color: "#34c759", background: "rgba(52,199,89,0.04)", borderBottom: "1px solid rgba(52,199,89,0.1)", cursor: "default" }}>✓ Present ({present.length})</td></tr>
+                          <tr><td colSpan={4} style={{ padding: "6px 12px", fontSize: 10, fontWeight: 800, color: "#34c759", background: "rgba(52,199,89,0.04)", borderBottom: "1px solid rgba(52,199,89,0.1)", cursor: "default" }}>✓ Present ({present.length})</td></tr>
                         )}
                         {present.map(renderRow)}
                       </tbody>
