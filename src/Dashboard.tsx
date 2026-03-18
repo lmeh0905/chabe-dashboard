@@ -1170,31 +1170,6 @@ function HomeView({ monthlyData, vehicles, loading, unavails, onNavigate }: {
             </>
           )}
 
-          {/* Quick nav */}
-          <Sec>Accès rapide</Sec>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
-            {[
-              { id: "daily", label: "Vue Daily", icon: "📅" },
-              { id: "monthly", label: "Vue Monthly", icon: "📊" },
-              { id: "annual", label: "Vue Annual", icon: "📈" },
-              { id: "fleet", label: "Flotte", icon: "🚗" },
-              { id: "attendance", label: "Attendance", icon: "⏰" },
-              { id: "sales", label: "Sales", icon: "💼" },
-            ].map(nav => (
-              <button key={nav.id} onClick={() => onNavigate(nav.id)} style={{
-                background: "#fff", border: "none", borderRadius: 12, padding: "14px 16px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.06)", cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 10,
-                fontFamily: "inherit", transition: "transform 0.1s, box-shadow 0.15s",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)"; }}
-              >
-                <span style={{ fontSize: 20 }}>{nav.icon}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#1d1d1f" }}>{nav.label}</span>
-              </button>
-            ))}
-          </div>
         </>
       )}
     </div>
