@@ -6056,6 +6056,7 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
   const [attYear, setAttYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [desigFilter, setDesigFilter] = useState("all");
+  const [catFilter, setCatFilter] = useState<"all" | "DRIVER" | "STAFF">("all");
   const [attNameFilter, setAttNameFilter] = useState("");
   // Cell editing (calendar grid)
   const [editCell, setEditCell] = useState<{ staffId: number; day: number } | null>(null);
@@ -6138,6 +6139,7 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
 
   const filteredStaff = staff.filter((s) => {
     if (s.excludeAttendance) return false;
+    if (catFilter !== "all" && s.category !== catFilter) return false;
     if (desigFilter !== "all" && s.designation !== desigFilter) return false;
     if (attNameFilter && !s.name.toLowerCase().includes(attNameFilter.toLowerCase())) return false;
     return true;
@@ -6384,13 +6386,11 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
               compact
               triggerStyle={{ background: "#f5f5f7", border: "1px solid #e5e5ea", minWidth: 70 }}
             />
-            <CustomSelect
-              value={desigFilter}
-              onChange={(v) => setDesigFilter(String(v))}
-              options={[{ value: "all", label: "All designations" }, ...designations.map((d) => ({ value: d, label: d }))]}
-              compact
-              triggerStyle={{ background: desigFilter !== "all" ? "rgba(0,122,255,0.08)" : "#f5f5f7", border: desigFilter !== "all" ? "1px solid rgba(0,122,255,0.3)" : "1px solid #e5e5ea", color: desigFilter !== "all" ? "#007aff" : "#1d1d1f", fontWeight: desigFilter !== "all" ? 700 : 400, minWidth: 140 }}
-            />
+            <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #e5e5ea" }}>
+              {([["all", "All"], ["DRIVER", "Drivers"], ["STAFF", "Staff"]] as const).map(([val, label]) => (
+                <button key={val} onClick={() => setCatFilter(val as "all" | "DRIVER" | "STAFF")} style={{ padding: "6px 14px", fontSize: 11, fontWeight: catFilter === val ? 700 : 400, background: catFilter === val ? "#007aff" : "#f5f5f7", color: catFilter === val ? "#fff" : "#1d1d1f", border: "none", cursor: "pointer", fontFamily: "inherit" }}>{label}</button>
+              ))}
+            </div>
             <div style={{ flex: 1 }} />
             {!readOnly && <button onClick={() => setShowHolidayForm(true)} style={{ background: "rgba(255,59,48,0.08)", color: "#ff3b30", border: "1px solid rgba(255,59,48,0.2)", borderRadius: 8, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>🗓 Public Holidays</button>}
             <button onClick={handleExportAttendance} style={{ background: "#34c759", color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>📥 Export Excel</button>
