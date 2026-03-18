@@ -6387,21 +6387,6 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
               compact
               triggerStyle={{ background: desigFilter !== "all" ? "rgba(0,122,255,0.08)" : "#f5f5f7", border: desigFilter !== "all" ? "1px solid rgba(0,122,255,0.3)" : "1px solid #e5e5ea", color: desigFilter !== "all" ? "#007aff" : "#1d1d1f", fontWeight: desigFilter !== "all" ? 700 : 400, minWidth: 140 }}
             />
-            <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-              <input
-                type="text"
-                value={attNameFilter}
-                onChange={(e) => setAttNameFilter(e.target.value)}
-                placeholder="🔍 Search by name..."
-                style={{ height: 32, borderRadius: 8, border: attNameFilter ? "1px solid rgba(0,122,255,0.3)" : "1px solid #e5e5ea", background: attNameFilter ? "rgba(0,122,255,0.08)" : "#f5f5f7", padding: "0 28px 0 10px", fontSize: 12, fontFamily: "inherit", fontWeight: attNameFilter ? 700 : 400, color: attNameFilter ? "#007aff" : "#1d1d1f", outline: "none", minWidth: 160 }}
-              />
-              {attNameFilter && (
-                <button
-                  onClick={() => setAttNameFilter("")}
-                  style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.1)", border: "none", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 10, color: "#666", lineHeight: 1, padding: 0 }}
-                >✕</button>
-              )}
-            </div>
             <div style={{ flex: 1 }} />
             {!readOnly && <button onClick={() => setShowHolidayForm(true)} style={{ background: "rgba(255,59,48,0.08)", color: "#ff3b30", border: "1px solid rgba(255,59,48,0.2)", borderRadius: 8, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>🗓 Public Holidays</button>}
             <button onClick={handleExportAttendance} style={{ background: "#34c759", color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>📥 Export Excel</button>
@@ -6710,6 +6695,26 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
               <div style={{ fontSize: 26, fontWeight: 800, color: "#af52de" }}>{otHoursStaff}</div>
               <div style={{ fontSize: 10, color: "#86868b", marginTop: 2 }}>{monthNames[attMonth]}</div>
             </div>
+          </div>
+
+          {/* Name filter — above calendar */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+              <input
+                type="text"
+                value={attNameFilter}
+                onChange={(e) => setAttNameFilter(e.target.value)}
+                placeholder="🔍 Search by name..."
+                style={{ height: 32, borderRadius: 8, border: attNameFilter ? "1px solid rgba(0,122,255,0.3)" : "1px solid #e5e5ea", background: attNameFilter ? "rgba(0,122,255,0.08)" : "#f5f5f7", padding: "0 28px 0 10px", fontSize: 12, fontFamily: "inherit", fontWeight: attNameFilter ? 700 : 400, color: attNameFilter ? "#007aff" : "#1d1d1f", outline: "none", minWidth: 180 }}
+              />
+              {attNameFilter && (
+                <button
+                  onClick={() => setAttNameFilter("")}
+                  style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.1)", border: "none", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 10, color: "#666", lineHeight: 1, padding: 0 }}
+                >✕</button>
+              )}
+            </div>
+            {attNameFilter && <span style={{ fontSize: 11, color: "#86868b" }}>{filteredStaff.length} result{filteredStaff.length !== 1 ? "s" : ""}</span>}
           </div>
 
           {/* Monthly calendar grid (read view) */}
