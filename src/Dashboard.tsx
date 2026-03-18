@@ -6775,7 +6775,7 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
                             <div style={{ display: "inline-block", padding: "3px 4px", borderRadius: 4, background: clr.bg, color: clr.color, fontWeight: 700, fontSize: 9, minWidth: 26, border: isEditing ? "2px solid #007aff" : "1px solid transparent" }}>
                               {st || "·"}
                               {(rec?.otHours ?? 0) > 0 && (
-                                <div onClick={(e) => { if (readOnly) return; e.stopPropagation(); setInlineOtCell({ staffId: s.id, day }); setInlineOtValue(String(rec!.otHours)); }} style={{ fontSize: 7, fontWeight: 800, color: "#ff9500", lineHeight: 1, marginTop: 1, cursor: readOnly ? "default" : "pointer" }}>+{rec!.otHours}h</div>
+                                <div onClick={(e) => { if (readOnly) return; e.stopPropagation(); setInlineOtCell({ staffId: s.id, day }); setInlineOtValue(String(rec!.otHours)); }} style={{ fontSize: 9, fontWeight: 800, color: "#ff9500", lineHeight: 1, marginTop: 2, cursor: readOnly ? "default" : "pointer" }}>+{rec!.otHours}h</div>
                               )}
                               {!rec?.otHours && st && !readOnly && (
                                 <div onClick={(e) => { e.stopPropagation(); setInlineOtCell({ staffId: s.id, day }); setInlineOtValue(""); }} style={{ fontSize: 6, color: "#d1d1d6", lineHeight: 1, marginTop: 1, cursor: "pointer" }}>+ot</div>
