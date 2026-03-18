@@ -6060,6 +6060,9 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
   // Cell editing (calendar grid)
   const [editCell, setEditCell] = useState<{ staffId: number; day: number } | null>(null);
   const [editOtHours, setEditOtHours] = useState("");
+  // Inline OT edit (small popup on OT badge click)
+  const [inlineOtCell, setInlineOtCell] = useState<{ staffId: number; day: number } | null>(null);
+  const [inlineOtValue, setInlineOtValue] = useState("");
   // Quick-entry panel
   const [quickDay, setQuickDay] = useState(new Date().getDate());
   const [quickSaving, setQuickSaving] = useState(false);
@@ -6220,6 +6223,22 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
         return [...prev, newRec];
       });
     } catch (e) { console.error(e); }
+  };
+
+  const handleInlineOtSave = async (staffId: number, day: number) => {
+    const dateStr = `${attYear}-${String(attMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const ot = parseFloat(inlineOtValue) || 0;
+    const currentStatus = attMap[staffId]?.[day]?.status || "P";
+    try {
+      await upsertAttendance(staffId, dateStr, currentStatus, ot);
+      setAttendance((prev) => {
+        const idx = prev.findIndex((r) => r.staffId === staffId && r.date === dateStr);
+        const newRec: AttendanceRecord = { id: 0, staffId, staffName: "", designation: "", date: dateStr, status: currentStatus, otHours: ot };
+        if (idx >= 0) { const copy = [...prev]; copy[idx] = { ...prev[idx], otHours: ot }; return copy; }
+        return [...prev, newRec];
+      });
+    } catch (e) { console.error(e); }
+    setInlineOtCell(null);
   };
 
   const handleExportAttendance = () => {
@@ -6756,9 +6775,22 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
                             <div style={{ display: "inline-block", padding: "3px 4px", borderRadius: 4, background: clr.bg, color: clr.color, fontWeight: 700, fontSize: 9, minWidth: 26, border: isEditing ? "2px solid #007aff" : "1px solid transparent" }}>
                               {st || "·"}
                               {(rec?.otHours ?? 0) > 0 && (
-                                <div style={{ fontSize: 7, fontWeight: 800, color: "#ff9500", lineHeight: 1, marginTop: 1 }}>+{rec!.otHours}h</div>
+                                <div onClick={(e) => { if (readOnly) return; e.stopPropagation(); setInlineOtCell({ staffId: s.id, day }); setInlineOtValue(String(rec!.otHours)); }} style={{ fontSize: 7, fontWeight: 800, color: "#ff9500", lineHeight: 1, marginTop: 1, cursor: readOnly ? "default" : "pointer" }}>+{rec!.otHours}h</div>
+                              )}
+                              {!rec?.otHours && st && !readOnly && (
+                                <div onClick={(e) => { e.stopPropagation(); setInlineOtCell({ staffId: s.id, day }); setInlineOtValue(""); }} style={{ fontSize: 6, color: "#d1d1d6", lineHeight: 1, marginTop: 1, cursor: "pointer" }}>+ot</div>
                               )}
                             </div>
+                            {/* Inline OT mini-editor */}
+                            {inlineOtCell?.staffId === s.id && inlineOtCell?.day === day && (
+                              <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", zIndex: 100, background: "#fff", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.15)", padding: "8px 10px", display: "flex", alignItems: "center", gap: 4, border: "1px solid #e5e5ea", whiteSpace: "nowrap" }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: "#ff9500" }}>OT</span>
+                                <input autoFocus type="number" min="0" step="0.5" value={inlineOtValue} onChange={(e) => setInlineOtValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleInlineOtSave(s.id, day); if (e.key === "Escape") setInlineOtCell(null); }} style={{ width: 44, padding: "4px 6px", borderRadius: 6, border: "1px solid #e5e5ea", fontSize: 12, fontFamily: "inherit", textAlign: "center" }} />
+                                <span style={{ fontSize: 9, color: "#86868b" }}>h</span>
+                                <button onClick={() => handleInlineOtSave(s.id, day)} style={{ background: "#ff9500", color: "#fff", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>✓</button>
+                                <button onClick={() => setInlineOtCell(null)} style={{ background: "#f5f5f7", color: "#86868b", border: "none", borderRadius: 6, padding: "4px 6px", fontSize: 9, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
+                              </div>
+                            )}
                             {isEditing && (() => {
                               const staffName = s.name;
                               const dayLabel = `${day} ${monthNames[attMonth].slice(0, 3)}`;
