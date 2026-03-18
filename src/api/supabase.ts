@@ -1486,6 +1486,11 @@ export async function createPublicHoliday(date: string, name: string): Promise<v
   if (error) throw new Error(`createPublicHoliday: ${error.message}`);
 }
 
+export async function updatePublicHoliday(id: number, date: string, name: string): Promise<void> {
+  const { error } = await supabase.from("public_holidays").update({ date, name }).eq("id", id);
+  if (error) throw new Error(`updatePublicHoliday: ${error.message}`);
+}
+
 export async function deletePublicHoliday(id: number): Promise<void> {
   const { error } = await supabase.from("public_holidays").delete().eq("id", id);
   if (error) throw new Error(`deletePublicHoliday: ${error.message}`);
