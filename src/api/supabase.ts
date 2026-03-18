@@ -1458,6 +1458,39 @@ export async function bulkUpsertAttendance(
   }
 }
 
+// ─── Public Holidays ──────────────────────────────────────────────────────────
+
+export interface PublicHoliday {
+  id: number;
+  date: string;
+  name: string;
+}
+
+export async function fetchPublicHolidays(year: number): Promise<PublicHoliday[]> {
+  const { data, error } = await supabase
+    .from("public_holidays")
+    .select("id, date, name")
+    .gte("date", `${year}-01-01`)
+    .lte("date", `${year}-12-31`)
+    .order("date");
+  if (error) throw new Error(`fetchPublicHolidays: ${error.message}`);
+  return (data ?? []).map((r: Record<string, unknown>) => ({
+    id: r.id as number,
+    date: r.date as string,
+    name: r.name as string,
+  }));
+}
+
+export async function createPublicHoliday(date: string, name: string): Promise<void> {
+  const { error } = await supabase.from("public_holidays").insert({ date, name });
+  if (error) throw new Error(`createPublicHoliday: ${error.message}`);
+}
+
+export async function deletePublicHoliday(id: number): Promise<void> {
+  const { error } = await supabase.from("public_holidays").delete().eq("id", id);
+  if (error) throw new Error(`deletePublicHoliday: ${error.message}`);
+}
+
 // ─── OT Rates ────────────────────────────────────────────────────────────────
 
 export interface OtRate {

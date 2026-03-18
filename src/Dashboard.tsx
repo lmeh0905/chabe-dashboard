@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import CustomSelect from "./components/CustomSelect";
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
-import { signOut, bulkInsertJobs, checkServiceAlerts, createAlert, createCheckIn, createExpense, createMake, createRefLocation, createRefModel, createRole, createUnavailability, createVehicle, deleteAlert, deleteDailyOp, deleteExpense, deleteJob, deleteJobsByDate, deleteMake, deleteRefLocation, deleteRefModel, deleteRole, deleteUser, fetchAlerts, fetchAllVehicles, fetchCheckIns, fetchDailyOp, fetchExpenses, fetchJobs, fetchMakes, fetchProfiles, fetchRefLocations, fetchRefModels, fetchRoles, fetchUnavailabilities, fetchUnavailabilityReasons, createUnavailabilityReason, deleteUnavailabilityReason, fetchVehicleTypes, getLastCheckout, inviteUser, markAlertRead, markAllAlertsRead, resolveUnavailability, updateUnavailability, submitDailyOp, updateAlertStatus, updatePassword, updateUserRole, updateVehicle, uploadVehicleAsset, fetchStaff, createStaff, updateStaff, deactivateStaff, fetchAttendance, fetchAttendanceByDate, upsertAttendance, bulkUpsertAttendance, type AlertInput, type AlertRecord, type AttendanceRecord, type CheckInInput, type CheckInRecord, type DailyOpRaw, type ExpenseType, type FleetVehicle, type Job, type JobInput, type Make, type RefLocation, type RefModel, type Role, type Staff, type StaffInput, type UnavailabilityReason, type UserProfile, type VehicleCreateInput, type VehicleExpense, type VehicleUnavailability, type VehicleUpdateInput, type VehicleType, deleteSalesLead, fetchSalesLeads, generateSalesLeads, updateSalesLead, createLeadActivity, fetchLeadActivities, fetchProspectContacts, updateProspectContact, fetchContactsForLead, createContactActivity, createProspectContact, linkContactToLead, searchApolloContacts, generateLeadEmail, enrichContactViaApollo, fetchAllActivities, fetchPermissionsForRole, fetchRolePermissions, setRolePermissions, type ActivityWithLead, type ApolloSearchResult, type ActivityType, type LeadActivity, type LeadConfidence, type LeadStatus, type LeadType, type SalesLead, type ContactStatus, type ProspectContactRecord, fetchDeductions, createDeduction, updateDeduction, deleteDeduction, createInstallmentDeductions, fetchDeductionsByGroup, deleteDeductionGroup, type Deduction, type DeductionType, fetchStaffDocuments, createStaffDocument, deleteStaffDocument, uploadStaffDocumentFile, type StaffDocument, type DocumentType, fetchMonthlyRecap, updateMonthlyRecap, recalcMonthlyRecap, type MonthlyRecapRecord, fetchStaffWithProfiles, inviteUserForStaff, getStaffWithoutAccounts, resetPasswordForStaff, deactivateUserAccount, reactivateUserAccount } from "./api/supabase";
+import { signOut, bulkInsertJobs, checkServiceAlerts, createAlert, createCheckIn, createExpense, createMake, createRefLocation, createRefModel, createRole, createUnavailability, createVehicle, deleteAlert, deleteDailyOp, deleteExpense, deleteJob, deleteJobsByDate, deleteMake, deleteRefLocation, deleteRefModel, deleteRole, deleteUser, fetchAlerts, fetchAllVehicles, fetchCheckIns, fetchDailyOp, fetchExpenses, fetchJobs, fetchMakes, fetchProfiles, fetchRefLocations, fetchRefModels, fetchRoles, fetchUnavailabilities, fetchUnavailabilityReasons, createUnavailabilityReason, deleteUnavailabilityReason, fetchVehicleTypes, getLastCheckout, inviteUser, markAlertRead, markAllAlertsRead, resolveUnavailability, updateUnavailability, submitDailyOp, updateAlertStatus, updatePassword, updateUserRole, updateVehicle, uploadVehicleAsset, fetchStaff, createStaff, updateStaff, deactivateStaff, fetchAttendance, fetchAttendanceByDate, upsertAttendance, bulkUpsertAttendance, type AlertInput, type AlertRecord, type AttendanceRecord, type CheckInInput, type CheckInRecord, type DailyOpRaw, type ExpenseType, type FleetVehicle, type Job, type JobInput, type Make, type RefLocation, type RefModel, type Role, type Staff, type StaffInput, type UnavailabilityReason, type UserProfile, type VehicleCreateInput, type VehicleExpense, type VehicleUnavailability, type VehicleUpdateInput, type VehicleType, deleteSalesLead, fetchSalesLeads, generateSalesLeads, updateSalesLead, createLeadActivity, fetchLeadActivities, fetchProspectContacts, updateProspectContact, fetchContactsForLead, createContactActivity, createProspectContact, linkContactToLead, searchApolloContacts, generateLeadEmail, enrichContactViaApollo, fetchAllActivities, fetchPermissionsForRole, fetchRolePermissions, setRolePermissions, type ActivityWithLead, type ApolloSearchResult, type ActivityType, type LeadActivity, type LeadConfidence, type LeadStatus, type LeadType, type SalesLead, type ContactStatus, type ProspectContactRecord, fetchDeductions, createDeduction, updateDeduction, deleteDeduction, createInstallmentDeductions, fetchDeductionsByGroup, deleteDeductionGroup, type Deduction, type DeductionType, fetchStaffDocuments, createStaffDocument, deleteStaffDocument, uploadStaffDocumentFile, type StaffDocument, type DocumentType, fetchMonthlyRecap, updateMonthlyRecap, recalcMonthlyRecap, type MonthlyRecapRecord, fetchStaffWithProfiles, inviteUserForStaff, getStaffWithoutAccounts, resetPasswordForStaff, deactivateUserAccount, reactivateUserAccount, fetchPublicHolidays, createPublicHoliday, deletePublicHoliday, type PublicHoliday } from "./api/supabase";
 import { useJobs } from "./context/JobsContext";
 import { deriveAnnual, deriveDailyData, deriveMonthlyData, getDailyKey, getVehicleType, VEHICLE_TYPES } from "./dashboardData";
 import { computeDepreciation, formatAED, DEPRECIATION_MONTHS } from "./utils/depreciation";
@@ -6102,15 +6102,21 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
   // Pool per day (from daily_op)
   const [poolMap, setPoolMap] = useState<Record<number, number>>({});
   const [poolInput, setPoolInput] = useState("");
+  // Public holidays
+  const [holidays, setHolidays] = useState<PublicHoliday[]>([]);
+  const [showHolidayForm, setShowHolidayForm] = useState(false);
+  const [newHolidayDate, setNewHolidayDate] = useState("");
+  const [newHolidayName, setNewHolidayName] = useState("");
 
   const loadData = async () => {
     setLoading(true);
     try {
       const dateStart = `${attYear}-${String(attMonth + 1).padStart(2, "0")}-01`;
       const dateEnd = `${attYear}-${String(attMonth + 1).padStart(2, "0")}-${new Date(attYear, attMonth + 1, 0).getDate()}`;
-      const [s, a, ops] = await Promise.all([fetchStaff(), fetchAttendance(attMonth, attYear), fetchDailyOp({ dateStart, dateEnd })]);
+      const [s, a, ops, hols] = await Promise.all([fetchStaff(), fetchAttendance(attMonth, attYear), fetchDailyOp({ dateStart, dateEnd }), fetchPublicHolidays(attYear)]);
       setStaff(s);
       setAttendance(a);
+      setHolidays(hols);
       const pm: Record<number, number> = {};
       for (const op of ops) {
         const day = parseInt(op.date.split("-")[2], 10);
@@ -6138,6 +6144,16 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
     }
     return m;
   }, [attendance]);
+
+  // Holiday map: day number -> holiday name (for current month)
+  const holidayMap = useMemo(() => {
+    const m: Record<number, string> = {};
+    for (const h of holidays) {
+      const [y, mo, da] = h.date.split("-").map(Number);
+      if (y === attYear && mo === attMonth + 1) m[da] = h.name;
+    }
+    return m;
+  }, [holidays, attMonth, attYear]);
 
   const filteredStaff = staff.filter((s) => {
     if (desigFilter !== "all" && s.designation !== desigFilter) return false;
@@ -6393,8 +6409,52 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
               )}
             </div>
             <div style={{ flex: 1 }} />
+            {!readOnly && <button onClick={() => setShowHolidayForm(true)} style={{ background: "rgba(255,59,48,0.08)", color: "#ff3b30", border: "1px solid rgba(255,59,48,0.2)", borderRadius: 8, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>🗓 Public Holidays</button>}
             <button onClick={handleExportAttendance} style={{ background: "#34c759", color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>📥 Export Excel</button>
           </div>
+
+          {/* Public Holidays Modal */}
+          {showHolidayForm && (
+            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)", padding: 16 }} onClick={() => setShowHolidayForm(false)}>
+              <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.2)", padding: 24, width: "100%", maxWidth: 420, maxHeight: "80vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1d1d1f" }}>🗓 Public Holidays — {attYear}</div>
+                  <button onClick={() => setShowHolidayForm(false)} style={{ background: "#f5f5f7", border: "none", borderRadius: 8, width: 28, height: 28, fontSize: 14, color: "#86868b", cursor: "pointer", fontFamily: "inherit" }}>✕</button>
+                </div>
+                {/* Existing holidays */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+                  {holidays.filter(h => h.date.startsWith(String(attYear))).length === 0 && <div style={{ fontSize: 12, color: "#86868b", fontStyle: "italic" }}>No holidays defined for {attYear}</div>}
+                  {holidays.filter(h => h.date.startsWith(String(attYear))).sort((a, b) => a.date.localeCompare(b.date)).map(h => (
+                    <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#f9f9fb", borderRadius: 10, border: "1px solid #f0f0f0" }}>
+                      <span style={{ fontWeight: 700, fontSize: 12, color: "#ff3b30", minWidth: 80 }}>{h.date}</span>
+                      <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "#1d1d1f" }}>{h.name}</span>
+                      <button onClick={async () => { await deletePublicHoliday(h.id); setHolidays(prev => prev.filter(x => x.id !== h.id)); }} style={{ background: "rgba(255,59,48,0.08)", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#ff3b30", cursor: "pointer", fontFamily: "inherit" }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+                {/* Add new */}
+                <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#86868b", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.3px" }}>Add Holiday</div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "end" }}>
+                    <div style={{ flex: 1 }}>
+                      <input type="date" value={newHolidayDate} onChange={(e) => setNewHolidayDate(e.target.value)} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #e5e5ea", fontSize: 12, fontFamily: "inherit" }} />
+                    </div>
+                    <div style={{ flex: 2 }}>
+                      <input type="text" value={newHolidayName} onChange={(e) => setNewHolidayName(e.target.value)} placeholder="Holiday name..." style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #e5e5ea", fontSize: 12, fontFamily: "inherit" }} />
+                    </div>
+                    <button onClick={async () => {
+                      if (!newHolidayDate || !newHolidayName.trim()) return;
+                      await createPublicHoliday(newHolidayDate, newHolidayName.trim());
+                      const updated = await fetchPublicHolidays(attYear);
+                      setHolidays(updated);
+                      setNewHolidayDate("");
+                      setNewHolidayName("");
+                    }} style={{ background: "#ff3b30", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>+ Add</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── QUICK ENTRY PANEL ─────────────────────────────────────── */}
           {!readOnly && (
@@ -6670,10 +6730,12 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
                     const isToday = todayDay === i + 1;
                     const isFri = d.getDay() === 5;
                     const isQuickDay = quickDay === i + 1;
+                    const isHoliday = !!holidayMap[i + 1];
                     return (
-                      <th key={i} onClick={() => !readOnly && setQuickDay(i + 1)} style={{ padding: "4px 2px", textAlign: "center", fontWeight: isToday ? 800 : 600, color: isToday ? "#007aff" : isFri ? "#ff9500" : "#86868b", fontSize: 9, minWidth: 32, background: isQuickDay ? "rgba(0,122,255,0.10)" : isToday ? "rgba(0,122,255,0.06)" : "#f5f5f7", cursor: readOnly ? "default" : "pointer", borderBottom: isQuickDay ? "2px solid #007aff" : undefined }}>
+                      <th key={i} onClick={() => !readOnly && setQuickDay(i + 1)} title={isHoliday ? holidayMap[i + 1] : undefined} style={{ padding: "4px 2px", textAlign: "center", fontWeight: isToday ? 800 : isHoliday ? 800 : 600, color: isHoliday ? "#ff3b30" : isToday ? "#007aff" : isFri ? "#ff9500" : "#86868b", fontSize: 9, minWidth: 32, background: isHoliday ? "rgba(255,59,48,0.10)" : isQuickDay ? "rgba(0,122,255,0.10)" : isToday ? "rgba(0,122,255,0.06)" : "#f5f5f7", cursor: readOnly ? "default" : "pointer", borderBottom: isQuickDay ? "2px solid #007aff" : isHoliday ? "2px solid #ff3b30" : undefined }}>
                         <div>{dayNames[d.getDay()]}</div>
                         <div style={{ fontSize: 11, fontWeight: 700 }}>{i + 1}</div>
+                        {isHoliday && <div style={{ fontSize: 6, fontWeight: 700, color: "#ff3b30", lineHeight: 1, marginTop: 1 }}>PH</div>}
                       </th>
                     );
                   })}
@@ -6715,7 +6777,7 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
                         const isQuickDay = quickDay === day;
                         const isEditing = editCell?.staffId === s.id && editCell?.day === day;
                         return (
-                          <td key={i} onClick={() => handleCellClick(s.id, day)} style={{ padding: "3px 1px", textAlign: "center", cursor: readOnly ? "default" : "pointer", position: "relative", background: isQuickDay ? "rgba(0,122,255,0.03)" : undefined }}>
+                          <td key={i} onClick={() => handleCellClick(s.id, day)} style={{ padding: "3px 1px", textAlign: "center", cursor: readOnly ? "default" : "pointer", position: "relative", background: !!holidayMap[day] ? "rgba(255,59,48,0.04)" : isQuickDay ? "rgba(0,122,255,0.03)" : undefined }}>
                             <div style={{ display: "inline-block", padding: "3px 4px", borderRadius: 4, background: clr.bg, color: clr.color, fontWeight: 700, fontSize: 9, minWidth: 26, border: isEditing ? "2px solid #007aff" : "1px solid transparent" }}>
                               {st || "·"}
                               {(rec?.otHours ?? 0) > 0 && (
