@@ -1055,6 +1055,7 @@ export interface Staff {
   isLocal: boolean;
   notes: string | null;
   ticketFrequency: number; // 1 = every year, 2 = every 2 years
+  excludeAttendance: boolean;
   // Linked user account
   userId: string | null;       // UUID from auth.users — null = no app account
   accountEmail?: string | null;  // populated by fetchStaffWithProfiles join
@@ -1085,6 +1086,7 @@ export interface StaffInput {
   is_local?: boolean;
   notes?: string | null;
   ticket_frequency?: number;
+  exclude_attendance?: boolean;
 }
 
 function normalizeStaff(r: Record<string, unknown>): Staff {
@@ -1113,6 +1115,7 @@ function normalizeStaff(r: Record<string, unknown>): Staff {
     isLocal: (r.is_local as boolean) ?? false,
     notes: (r.notes as string) ?? null,
     ticketFrequency: r.ticket_frequency != null ? Number(r.ticket_frequency) : 2,
+    excludeAttendance: (r.exclude_attendance as boolean) ?? false,
     userId: (r.user_id as string) ?? null,
   };
 }

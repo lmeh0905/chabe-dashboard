@@ -6137,6 +6137,7 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
   }, [holidays, attMonth, attYear]);
 
   const filteredStaff = staff.filter((s) => {
+    if (s.excludeAttendance) return false;
     if (desigFilter !== "all" && s.designation !== desigFilter) return false;
     if (attNameFilter && !s.name.toLowerCase().includes(attNameFilter.toLowerCase())) return false;
     return true;
@@ -7784,6 +7785,7 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
         date_of_arrival: (editFields.date_of_arrival as string) || undefined,
         release_date: (editFields.release_date as string) || undefined,
         is_local: Boolean(editFields.is_local),
+        exclude_attendance: Boolean(editFields.exclude_attendance),
         ticket_frequency: editFields.ticket_frequency != null ? Number(editFields.ticket_frequency) : 2,
         notes: (editFields.notes as string) || undefined,
         basic_salary: editFields.basic_salary !== "" && editFields.basic_salary != null ? Number(editFields.basic_salary) : undefined,
@@ -8677,7 +8679,7 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
                       first_name: profileStaff.firstName || "", last_name: profileStaff.lastName || "",
                       designation: profileStaff.designation, category: profileStaff.category,
                       date_of_arrival: profileStaff.dateOfArrival || "", release_date: profileStaff.releaseDate || "",
-                      is_local: profileStaff.isLocal, ticket_frequency: String(profileStaff.ticketFrequency), notes: profileStaff.notes || "",
+                      is_local: profileStaff.isLocal, exclude_attendance: profileStaff.excludeAttendance, ticket_frequency: String(profileStaff.ticketFrequency), notes: profileStaff.notes || "",
                       basic_salary: profileStaff.basicSalary ?? "", housing_allowance: profileStaff.housingAllowance ?? "",
                       transport_allowance: profileStaff.transportAllowance ?? "", school_allowance: profileStaff.schoolAllowance,
                       monthly_bonus: profileStaff.monthlyBonus, total_on_contract: profileStaff.totalOnContract ?? "",
@@ -8716,6 +8718,7 @@ function HRView({ readOnly = false }: { readOnly?: boolean }) {
                     { label: "Staff Number", key: "_staff_number", val: String(profileStaff.staffNumber), readOnly: true },
                     { label: "Status", key: "_status", val: profileStaff.status, readOnly: true },
                     { label: "UAE National", key: "is_local", val: profileStaff.isLocal ? "Yes" : "No", type: "checkbox" },
+                    { label: "Exclude from Attendance", key: "exclude_attendance", val: profileStaff.excludeAttendance ? "Yes" : "No", type: "checkbox" },
                   ] as { label: string; key: string; val: Any; type?: string; options?: string[]; optionLabels?: string[]; readOnly?: boolean }[]).map(f => (
                     <div key={f.key}>
                       <div style={fieldLabel}>{f.label}</div>
