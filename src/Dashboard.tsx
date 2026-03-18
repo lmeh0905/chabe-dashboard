@@ -11241,7 +11241,7 @@ function AdminView() {
                             { id: "monthly", label: "Monthly" }, { id: "annual", label: "Annual" },
                             { id: "fleet", label: "Fleet" }, { id: "checkin", label: "Check-In" },
                             { id: "attendance", label: "Attendance" }, { id: "hr", label: "HR" },
-                            { id: "sales", label: "Sales" }, { id: "admin", label: "Admin" },
+                            { id: "payroll", label: "Payroll" }, { id: "sales", label: "Sales" }, { id: "admin", label: "Admin" },
                           ].map((t) => (
                             <th key={t.id} style={{ textAlign: "center", padding: "8px 6px", borderBottom: "2px solid #e8e8ed", fontWeight: 600, color: "#86868b", fontSize: 10, whiteSpace: "nowrap" }}>{t.label}</th>
                           ))}
@@ -11254,7 +11254,7 @@ function AdminView() {
                               {role.label}
                               {role.name === "admin" && <span style={{ fontSize: 9, color: "#86868b", marginLeft: 6 }}>👑</span>}
                             </td>
-                            {["daily", "dailyinput", "monthly", "annual", "fleet", "checkin", "attendance", "hr", "sales", "admin"].map((tabId) => {
+                            {["daily", "dailyinput", "monthly", "annual", "fleet", "checkin", "attendance", "hr", "payroll", "sales", "admin"].map((tabId) => {
                               const isLocked = role.name === "admin" && tabId === "admin";
                               const level = editPerms.get(role.name)?.get(tabId);
                               const icon = level === "edit" ? "✏️" : level === "view" ? "👁" : "—";
