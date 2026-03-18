@@ -175,7 +175,7 @@ export default function Sidebar({
   const isCollapsed = mobileOpen ? false : collapsed;
 
   const isAllowed = (tabId: string) =>
-    effectiveRole === "admin" || !effectiveTabs || effectiveTabs.length === 0 || effectiveTabs.includes(tabId);
+    tabId === "home" || effectiveRole === "admin" || !effectiveTabs || effectiveTabs.length === 0 || effectiveTabs.includes(tabId);
 
   const handleNav = (id: string) => {
     onViewChange(id);

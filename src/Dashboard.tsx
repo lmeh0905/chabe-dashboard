@@ -11533,12 +11533,7 @@ function AdminView() {
 }
 
 export default function Dashboard({ profile }: { profile: UserProfile }) {
-  const [view, setView] = useState(() => {
-    const tabs = profile.allowedTabs ?? [];
-    if (!tabs.length || tabs.includes("home")) return "home";
-    if (tabs.includes("daily")) return "daily";
-    return tabs[0] ?? "home";
-  });
+  const [view, setView] = useState("home");
   const { jobs, loading: jobsLoading } = useJobs();
   const [bauFilter, setBauFilter] = useState<"all" | "BAU" | "Event">("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("sidebar-collapsed") === "true");
@@ -11656,7 +11651,7 @@ export default function Dashboard({ profile }: { profile: UserProfile }) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _canEdit = effectiveRole === "admin" || Object.values(effectivePermissions).some(v => v === "edit");
   const effectiveTabs = previewTabs ?? profile.allowedTabs;
-  const isAllowed = (tabId: string) => effectiveRole === "admin" || !effectiveTabs || effectiveTabs.length === 0 || effectiveTabs.includes(tabId);
+  const isAllowed = (tabId: string) => tabId === "home" || effectiveRole === "admin" || !effectiveTabs || effectiveTabs.length === 0 || effectiveTabs.includes(tabId);
 
   // Quand on active le preview, reset la vue au 1er onglet autorisé
   const handlePreviewRole = async (roleName: string | null) => {
@@ -11664,7 +11659,7 @@ export default function Dashboard({ profile }: { profile: UserProfile }) {
       setPreviewRole(null);
       setPreviewTabs(null);
       setPreviewPermissions(null);
-      setView(profile.allowedTabs?.length ? profile.allowedTabs[0] : "daily");
+      setView("home");
       return;
     }
     try {
@@ -11674,7 +11669,7 @@ export default function Dashboard({ profile }: { profile: UserProfile }) {
       setPreviewRole(roleName);
       setPreviewTabs(tabIds);
       setPreviewPermissions(permMap);
-      setView(tabIds.length > 0 ? tabIds[0] : "daily");
+      setView("home");
     } catch (err) {
       console.error("Preview role error:", err);
     }
