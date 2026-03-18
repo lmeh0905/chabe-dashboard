@@ -6081,6 +6081,7 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
   const [attYear, setAttYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [desigFilter, setDesigFilter] = useState("all");
+  const [attNameFilter, setAttNameFilter] = useState("");
   // Cell editing (calendar grid)
   const [editCell, setEditCell] = useState<{ staffId: number; day: number } | null>(null);
   const [editOtHours, setEditOtHours] = useState("");
@@ -6138,7 +6139,11 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
     return m;
   }, [attendance]);
 
-  const filteredStaff = desigFilter === "all" ? staff : staff.filter((s) => s.designation === desigFilter);
+  const filteredStaff = staff.filter((s) => {
+    if (desigFilter !== "all" && s.designation !== desigFilter) return false;
+    if (attNameFilter && !s.name.toLowerCase().includes(attNameFilter.toLowerCase())) return false;
+    return true;
+  });
   const designations = [...new Set(staff.map((s) => s.designation))].sort();
 
   // KPIs
@@ -6372,6 +6377,21 @@ function AttendanceView({ readOnly = false }: { readOnly?: boolean }) {
               compact
               triggerStyle={{ background: desigFilter !== "all" ? "rgba(0,122,255,0.08)" : "#f5f5f7", border: desigFilter !== "all" ? "1px solid rgba(0,122,255,0.3)" : "1px solid #e5e5ea", color: desigFilter !== "all" ? "#007aff" : "#1d1d1f", fontWeight: desigFilter !== "all" ? 700 : 400, minWidth: 140 }}
             />
+            <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+              <input
+                type="text"
+                value={attNameFilter}
+                onChange={(e) => setAttNameFilter(e.target.value)}
+                placeholder="🔍 Search by name..."
+                style={{ height: 32, borderRadius: 8, border: attNameFilter ? "1px solid rgba(0,122,255,0.3)" : "1px solid #e5e5ea", background: attNameFilter ? "rgba(0,122,255,0.08)" : "#f5f5f7", padding: "0 28px 0 10px", fontSize: 12, fontFamily: "inherit", fontWeight: attNameFilter ? 700 : 400, color: attNameFilter ? "#007aff" : "#1d1d1f", outline: "none", minWidth: 160 }}
+              />
+              {attNameFilter && (
+                <button
+                  onClick={() => setAttNameFilter("")}
+                  style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.1)", border: "none", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 10, color: "#666", lineHeight: 1, padding: 0 }}
+                >✕</button>
+              )}
+            </div>
             <div style={{ flex: 1 }} />
             <button onClick={handleExportAttendance} style={{ background: "#34c759", color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>📥 Export Excel</button>
           </div>
