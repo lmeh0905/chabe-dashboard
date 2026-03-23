@@ -97,7 +97,7 @@ export default function LoginPage() {
               marginBottom: 6,
             }}
           >
-            CHABE Dubai
+            {new URLSearchParams(window.location.search).get("agency") === "cra" ? "CHABE Province Sud Est CRA" : "CHABE Dubai"}
           </div>
           <div
             style={{
