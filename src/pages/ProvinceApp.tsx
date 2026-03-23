@@ -24,7 +24,7 @@ export default function ProvinceApp({ profile }: { profile: UserProfile }) {
           <span style={{ fontSize: 13, opacity: 0.7 }}>Province Sud Est CRA</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ fontSize: 13, opacity: 0.8 }}>{profile.full_name}</span>
+          <span style={{ fontSize: 13, opacity: 0.8 }}>{profile.name}</span>
           <button
             onClick={() => signOut()}
             style={{
