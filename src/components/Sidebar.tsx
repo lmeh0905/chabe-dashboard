@@ -69,6 +69,12 @@ const ICONS: Record<string, JSX.Element> = {
       <polyline points="17 6 23 6 23 12" />
     </svg>
   ),
+  tarifs: (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+    </svg>
+  ),
   admin: (
     <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
@@ -136,6 +142,12 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "province", label: "Province",
+    items: [
+      { id: "tarifs", label: "Tarifs" },
+    ],
+  },
+  {
     id: "admin-group", label: "Admin",
     items: [
       { id: "admin", label: "Admin" },
@@ -174,8 +186,10 @@ export default function Sidebar({
   // On mobile drawer, always show expanded (labels visible)
   const isCollapsed = mobileOpen ? false : collapsed;
 
-  const isAllowed = (tabId: string) =>
-    tabId === "home" || effectiveRole === "admin" || !effectiveTabs || effectiveTabs.length === 0 || effectiveTabs.includes(tabId);
+  const isAllowed = (tabId: string) => {
+    if (effectiveRole === "admin" || !effectiveTabs || effectiveTabs.length === 0) return true;
+    return effectiveTabs.includes(tabId);
+  };
 
   const handleNav = (id: string) => {
     onViewChange(id);

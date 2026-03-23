@@ -3,10 +3,11 @@ import * as XLSX from "xlsx";
 import CustomSelect from "./components/CustomSelect";
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
-import { signOut, bulkInsertJobs, checkServiceAlerts, createAlert, createCheckIn, createExpense, createMake, createRefLocation, createRefModel, createRole, createUnavailability, createVehicle, deleteAlert, deleteDailyOp, deleteExpense, deleteJob, deleteJobsByDate, deleteMake, deleteRefLocation, deleteRefModel, deleteRole, deleteUser, fetchAlerts, fetchAllVehicles, fetchCheckIns, fetchDailyOp, fetchExpenses, fetchJobs, fetchMakes, fetchProfiles, fetchRefLocations, fetchRefModels, fetchRoles, fetchUnavailabilities, fetchUnavailabilityReasons, createUnavailabilityReason, deleteUnavailabilityReason, fetchVehicleTypes, getLastCheckout, inviteUser, markAlertRead, markAllAlertsRead, resolveUnavailability, updateUnavailability, submitDailyOp, updateAlertStatus, updatePassword, updateUserRole, updateVehicle, uploadVehicleAsset, fetchStaff, createStaff, updateStaff, deactivateStaff, fetchAttendance, fetchAttendanceByDate, upsertAttendance, bulkUpsertAttendance, type AlertInput, type AlertRecord, type AttendanceRecord, type CheckInInput, type CheckInRecord, type DailyOpRaw, type ExpenseType, type FleetVehicle, type Job, type JobInput, type Make, type RefLocation, type RefModel, type Role, type Staff, type StaffInput, type UnavailabilityReason, type UserProfile, type VehicleCreateInput, type VehicleExpense, type VehicleUnavailability, type VehicleUpdateInput, type VehicleType, deleteSalesLead, fetchSalesLeads, generateSalesLeads, updateSalesLead, createLeadActivity, fetchLeadActivities, fetchProspectContacts, updateProspectContact, fetchContactsForLead, createContactActivity, createProspectContact, linkContactToLead, searchApolloContacts, generateLeadEmail, enrichContactViaApollo, fetchAllActivities, fetchPermissionsForRole, fetchRolePermissions, setRolePermissions, type ActivityWithLead, type ApolloSearchResult, type ActivityType, type LeadActivity, type LeadConfidence, type LeadStatus, type LeadType, type SalesLead, type ContactStatus, type ProspectContactRecord, fetchDeductions, createDeduction, updateDeduction, deleteDeduction, createInstallmentDeductions, fetchDeductionsByGroup, deleteDeductionGroup, type Deduction, type DeductionType, fetchStaffDocuments, createStaffDocument, deleteStaffDocument, uploadStaffDocumentFile, type StaffDocument, type DocumentType, fetchMonthlyRecap, updateMonthlyRecap, recalcMonthlyRecap, type MonthlyRecapRecord, fetchStaffWithProfiles, inviteUserForStaff, getStaffWithoutAccounts, resetPasswordForStaff, deactivateUserAccount, reactivateUserAccount, fetchPublicHolidays, createPublicHoliday, updatePublicHoliday, deletePublicHoliday, type PublicHoliday } from "./api/supabase";
+import { signOut, bulkInsertJobs, checkServiceAlerts, createAlert, createCheckIn, createExpense, createMake, createRefLocation, createRefModel, createRole, createUnavailability, createVehicle, deleteAlert, deleteDailyOp, deleteExpense, deleteJob, deleteJobsByDate, deleteMake, deleteRefLocation, deleteRefModel, deleteRole, deleteUser, fetchAlerts, fetchAllVehicles, fetchCheckIns, fetchDailyOp, fetchExpenses, fetchJobs, fetchMakes, fetchProfiles, fetchRefLocations, fetchRefModels, fetchRoles, fetchUnavailabilities, fetchUnavailabilityReasons, createUnavailabilityReason, deleteUnavailabilityReason, fetchVehicleTypes, getLastCheckout, inviteUser, markAlertRead, markAllAlertsRead, resolveUnavailability, updateUnavailability, submitDailyOp, updateAlertStatus, updatePassword, updateUserRole, updateVehicle, uploadVehicleAsset, fetchStaff, createStaff, updateStaff, deactivateStaff, fetchAttendance, fetchAttendanceByDate, upsertAttendance, bulkUpsertAttendance, type AlertInput, type AlertRecord, type AttendanceRecord, type CheckInInput, type CheckInRecord, type DailyOpRaw, type ExpenseType, type FleetVehicle, type Job, type JobInput, type Make, type RefLocation, type RefModel, type Role, type Staff, type StaffInput, type UnavailabilityReason, type UserProfile, type VehicleCreateInput, type VehicleExpense, type VehicleUnavailability, type VehicleUpdateInput, type VehicleType, deleteSalesLead, fetchSalesLeads, generateSalesLeads, updateSalesLead, createLeadActivity, fetchLeadActivities, fetchProspectContacts, updateProspectContact, fetchContactsForLead, createContactActivity, createProspectContact, linkContactToLead, searchApolloContacts, generateLeadEmail, enrichContactViaApollo, fetchAllActivities, fetchPermissionsForRole, fetchRolePermissions, setRolePermissions, type ActivityWithLead, type ApolloSearchResult, type ActivityType, type LeadActivity, type LeadConfidence, type LeadStatus, type LeadType, type SalesLead, type ContactStatus, type ProspectContactRecord, fetchDeductions, createDeduction, updateDeduction, deleteDeduction, createInstallmentDeductions, fetchDeductionsByGroup, deleteDeductionGroup, type Deduction, type DeductionType, fetchStaffDocuments, createStaffDocument, deleteStaffDocument, uploadStaffDocumentFile, type StaffDocument, type DocumentType, fetchMonthlyRecap, updateMonthlyRecap, recalcMonthlyRecap, type MonthlyRecapRecord, fetchStaffWithProfiles, inviteUserForStaff, getStaffWithoutAccounts, resetPasswordForStaff, deactivateUserAccount, reactivateUserAccount, fetchPublicHolidays, createPublicHoliday, updatePublicHoliday, deletePublicHoliday, type PublicHoliday, countActiveDrivers } from "./api/supabase";
 import { useJobs } from "./context/JobsContext";
 import { deriveAnnual, deriveDailyData, deriveMonthlyData, getDailyKey, getVehicleType, VEHICLE_TYPES } from "./dashboardData";
 import { computeDepreciation, formatAED, DEPRECIATION_MONTHS } from "./utils/depreciation";
+import TarifsProvinceView from "./pages/TarifsProvince";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -927,6 +928,10 @@ function HomeView({ monthlyData, vehicles, loading, unavails, onNavigate }: {
   const m = monthlyData[curKey] ?? null;
   const prev = monthlyData[prevKey] ?? null;
 
+  // Active driver count from staff table
+  const [activeDriverCount, setActiveDriverCount] = useState<number>(0);
+  useEffect(() => { countActiveDrivers().then(setActiveDriverCount).catch(() => {}); }, []);
+
   // Fleet availability (must be before any early return — hooks cannot be conditional)
   const curDay = now.getDate();
   const fleetAvailRate = useMemo(() => {
@@ -952,7 +957,7 @@ function HomeView({ monthlyData, vehicles, loading, unavails, onNavigate }: {
   const totalHL = totalJobs - totalLT - totalLH;
   const avgRpd = m ? avg_(m.revDriver) : 0;
   const avgPctWorking = m ? avg_(m.pctWorking) : 0;
-  const uniqueDrivers = m?.uniqueDrivers ?? 0;
+  const uniqueDrivers = activeDriverCount;
   const nbDays = m ? m.days.length : 0;
 
   // Previous month for comparison
@@ -11539,7 +11544,10 @@ function AdminView() {
 }
 
 export default function Dashboard({ profile }: { profile: UserProfile }) {
-  const [view, setView] = useState("home");
+  const defaultView = profile.allowedTabs && profile.allowedTabs.length > 0 && !profile.allowedTabs.includes("home")
+    ? profile.allowedTabs[0]
+    : "home";
+  const [view, setView] = useState(defaultView);
   const { jobs, loading: jobsLoading } = useJobs();
   const [bauFilter, setBauFilter] = useState<"all" | "BAU" | "Event">("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("sidebar-collapsed") === "true");
@@ -11657,7 +11665,10 @@ export default function Dashboard({ profile }: { profile: UserProfile }) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _canEdit = effectiveRole === "admin" || Object.values(effectivePermissions).some(v => v === "edit");
   const effectiveTabs = previewTabs ?? profile.allowedTabs;
-  const isAllowed = (tabId: string) => tabId === "home" || effectiveRole === "admin" || !effectiveTabs || effectiveTabs.length === 0 || effectiveTabs.includes(tabId);
+  const isAllowed = (tabId: string) => {
+    if (effectiveRole === "admin" || !effectiveTabs || effectiveTabs.length === 0) return true;
+    return effectiveTabs.includes(tabId);
+  };
 
   // Quand on active le preview, reset la vue au 1er onglet autorisé
   const handlePreviewRole = async (roleName: string | null) => {
@@ -11675,7 +11686,7 @@ export default function Dashboard({ profile }: { profile: UserProfile }) {
       setPreviewRole(roleName);
       setPreviewTabs(tabIds);
       setPreviewPermissions(permMap);
-      setView("home");
+      setView(tabIds.includes("home") || tabIds.length === 0 ? "home" : tabIds[0]);
     } catch (err) {
       console.error("Preview role error:", err);
     }
@@ -11805,6 +11816,7 @@ export default function Dashboard({ profile }: { profile: UserProfile }) {
         {view === "hr" && isAllowed("hr") && <HRView readOnly={!canEditTab("hr")} />}
         {view === "payroll" && isAllowed("payroll") && <PayrollView readOnly={!canEditTab("payroll")} />}
         {view === "sales" && isAllowed("sales") && <SalesView readOnly={!canEditTab("sales")} />}
+        {view === "tarifs" && isAllowed("tarifs") && <TarifsProvinceView readOnly={!canEditTab("tarifs")} isAdmin={effectiveRole === "admin"} />}
         {view === "admin" && isAllowed("admin") && <AdminView />}
       </div>
       </div>{/* fin main area */}

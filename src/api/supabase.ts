@@ -1128,6 +1128,19 @@ export async function fetchStaff(includeInactive = false): Promise<Staff[]> {
   return (data ?? []).map(normalizeStaff);
 }
 
+/** Count active drivers (category=DRIVER, no release_date or release_date >= today) */
+export async function countActiveDrivers(): Promise<number> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { count, error } = await supabase
+    .from("staff")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "active")
+    .eq("category", "DRIVER")
+    .or(`release_date.is.null,release_date.gte.${today}`);
+  if (error) throw new Error(`countActiveDrivers: ${error.message}`);
+  return count ?? 0;
+}
+
 export async function createStaff(input: StaffInput): Promise<Staff> {
   const { data, error } = await supabase.from("staff").insert(input).select().single();
   if (error) throw new Error(`createStaff: ${error.message}`);
@@ -2263,4 +2276,128 @@ export async function uploadStaffDocumentFile(staffId: number, file: File, docTy
   if (error) throw new Error(`uploadStaffDocumentFile: ${error.message}`);
   const { data } = supabase.storage.from("staff-documents").getPublicUrl(filePath);
   return data.publicUrl;
+}
+
+// ─── Tarifs Province ──────────────────────────────────────────────────────────
+
+export interface TarifProvince {
+  id: number;
+  itineraire: string;
+  depart: string | null;
+  arrivee: string | null;
+  kilometres: number | null;
+  temps: number | null;
+  peages: number;
+  repas: number;
+  frais: number;
+  public_e: number | null;
+  public_v: number | null;
+  public_s: number | null;
+  public_prestige: number | null;
+  hotel_e: number | null;
+  hotel_v: number | null;
+  hotel_s: number | null;
+  hotel_prestige: number | null;
+  interco_e: number | null;
+  interco_v: number | null;
+  interco_s: number | null;
+  interco_prestige: number | null;
+  sst_e: number | null;
+  sst_v: number | null;
+  sst_s: number | null;
+  sst_prestige: number | null;
+  corpo_e: number | null;
+  corpo_v: number | null;
+  corpo_s: number | null;
+  corpo_prestige: number | null;
+  corpo_rem_e: number | null;
+  corpo_rem_v: number | null;
+  corpo_rem_s: number | null;
+  corpo_rem_prestige: number | null;
+  service: number | null;
+  prix_voiture_e: number | null;
+  prix_voiture_v: number | null;
+  prix_voiture_s: number | null;
+  prix_voiture_prestige: number | null;
+  created_at?: string;
+}
+
+export type TarifProvinceInput = Omit<TarifProvince, "id" | "created_at">;
+
+export async function fetchTarifs(search?: string, sortAsc = true): Promise<TarifProvince[]> {
+  const PAGE = 1000;
+  let all: TarifProvince[] = [];
+  let from = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    let q = supabase
+      .from("tarifs_province")
+      .select("*")
+      .order("itineraire", { ascending: sortAsc })
+      .range(from, from + PAGE - 1);
+    if (search && search.trim()) {
+      const s = `%${search.trim()}%`;
+      q = q.or(`itineraire.ilike.${s},depart.ilike.${s},arrivee.ilike.${s}`);
+    }
+    const { data, error } = await q;
+    if (error) throw new Error(`fetchTarifs: ${error.message}`);
+    const rows = (data ?? []) as TarifProvince[];
+    all = all.concat(rows);
+    if (rows.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
+export async function createTarif(tarif: TarifProvinceInput): Promise<TarifProvince> {
+  const { data, error } = await supabase
+    .from("tarifs_province")
+    .insert(tarif)
+    .select()
+    .single();
+  if (error) throw new Error(`createTarif: ${error.message}`);
+  return data as TarifProvince;
+}
+
+export async function updateTarif(id: number, tarif: Partial<TarifProvinceInput>): Promise<TarifProvince> {
+  const { data, error } = await supabase
+    .from("tarifs_province")
+    .update(tarif)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw new Error(`updateTarif: ${error.message}`);
+  return data as TarifProvince;
+}
+
+export async function deleteTarif(id: number): Promise<void> {
+  const { error } = await supabase
+    .from("tarifs_province")
+    .delete()
+    .eq("id", id);
+  if (error) throw new Error(`deleteTarif: ${error.message}`);
+}
+
+export async function deleteAllTarifs(): Promise<void> {
+  const { error } = await supabase
+    .from("tarifs_province")
+    .delete()
+    .gte("id", 0);
+  if (error) throw new Error(`deleteAllTarifs: ${error.message}`);
+}
+
+export async function bulkInsertTarifs(tarifs: TarifProvinceInput[]): Promise<number> {
+  if (tarifs.length === 0) return 0;
+  const BATCH = 500;
+  let inserted = 0;
+  for (let i = 0; i < tarifs.length; i += BATCH) {
+    const batch = tarifs.slice(i, i + BATCH);
+    const { data, error } = await supabase
+      .from("tarifs_province")
+      .insert(batch)
+      .select("id");
+    if (error) throw new Error(`bulkInsertTarifs batch ${i}: ${error.message}`);
+    inserted += data?.length ?? batch.length;
+  }
+  return inserted;
 }

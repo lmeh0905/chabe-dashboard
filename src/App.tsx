@@ -6,8 +6,9 @@ import Dashboard from "./Dashboard";
 import { JobsProvider } from "./context/JobsContext";
 import LoginPage from "./pages/LoginPage";
 import DriverApp from "./pages/DriverApp";
+import ProvinceApp from "./pages/ProvinceApp";
 
-type AppState = "loading" | "unauthenticated" | "password_recovery" | "driver" | "manager";
+type AppState = "loading" | "unauthenticated" | "password_recovery" | "driver" | "province" | "manager";
 
 // ─── Écran définir nouveau mot de passe ───────────────────────────────────────
 
@@ -223,7 +224,7 @@ export default function App() {
         return;
       }
       setProfile(p);
-      setAppState(p.role === "driver" ? "driver" : "manager");
+      setAppState(p.role === "driver" ? "driver" : p.role === "Province Sud Est" ? "province" : "manager");
     } catch {
       setProfile(null);
       setAppState("unauthenticated");
@@ -293,6 +294,10 @@ export default function App() {
 
   if (appState === "driver" && profile) {
     return <DriverApp profile={profile} />;
+  }
+
+  if (appState === "province" && profile) {
+    return <ProvinceApp profile={profile} />;
   }
 
   return (
